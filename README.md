@@ -23,6 +23,7 @@ conda install pytorch torchvision -c soumith
 https://github.com/torrvision/crayon
 
 # train transformer
+### Captioning Transformer with Stacked Attention Modules
 https://www.mdpi.com/2076-3417/8/5/739/html
 
 the script
