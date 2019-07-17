@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <style>
+        #caption_result {
+            border-collapse: collapse;
+            border: 1px solid black;
+        }
+
+        #caption_result td {
+            border: 1px solid black;
+        }
+
+        hr {
+            font-size: 0px;
+            line-height: 0px;
+            padding: 0px;
+            margin: 0px;
+        }
+    </style>
+    <meta charset="UTF-8">
+    <title>History</title>
+    <script src="jquery.min.js"></script>
+</head>
+<body>
+<select id="select_result"></select>
+<button id="btn_load" disabled="disabled">LOAD</button>
+<table id="caption_result"></table>
+
+<script>
+
+    $(document).ready(function () {
+
+        $("#btn_load").click(function () {
+            url = $("#select_result").val()
+            console.log(url)
+            $("#btn_load").html("LOADING...")
+            load_data(url)
+        })
+
+        url = "histories.txt";
+        $.ajax({
+            url: url,
+            async: false,
+            success: function (result) {
+                coco_results = result.split("\n")
+                //console.log(coco_results)
+                for (var r in coco_results) {
+                    $("#select_result").append("<option value='" + coco_results[r] + "'>" + coco_results[r] + "</option>")
+                }
+            }
+        });
+
+        dict_coco = null
+        url = "dict_coco.json";
+        $.ajax({
+            url: url,
+            dataType: "json",
+            async: true,
+            success: function (result) {
+                dict_coco = result
+                $("#btn_load").removeAttr("disabled")
+            }
+        });
+
+        function get_td(image_id, captions) {
+
+            img_src = "dataset/" + dict_coco[image_id]['file_path']
+            caps = captions.join("<br>")
+            annos = dict_coco[image_id]['captions'].join("<br>")
+
+            td = "<td>" + image_id + "</td>" +
+                "<td><img width='150px' src='" + img_src + "'/></td>" +
+                "<td><b>" + caps + "</b><hr>" + annos + "</td>"
+            return td
+        }
+
+        function to_html(dict_caption) {
+            column = 1
+            index = 0
+            cols = new Array()
+            $("#caption_result").empty()
+            for (var image_id in dict_caption) {
+                index += 1
+                cols.push(get_td(image_id, dict_caption[image_id]))
+                if (index % column == 0) {
+                    $("#caption_result").append("<tr>" + cols.join("") + "</tr>")
+                    cols = new Array()
+                }
+            }
+        }
+
+        function f(num) {
+            return num.toFixed(3)
+        }
+
+        function load_data(url) {
+
+            var dict_caption = new Array()
+            $.ajax({
+                url: url,
+                dataType: "json",
+                async: true,
+                success: function (val_history) {
+
+                    for (var iteration in val_history) {
+                        result = val_history[iteration]
+                        predictions = result["predictions"]
+                        lang_stats = result["lang_stats"]
+
+                        CIDEr = lang_stats["CIDEr"]
+                        Bleu_4 = lang_stats["Bleu_4"]
+                        Bleu_3 = lang_stats["Bleu_3"]
+                        Bleu_2 = lang_stats["Bleu_2"]
+                        Bleu_1 = lang_stats["Bleu_1"]
+                        ROUGE_L = lang_stats["ROUGE_L"]
+
+                        str_stats = "iter:" + iteration +
+                                " CIDEr:"  + f(CIDEr)  +
+                                " Bleu_4:" + f(Bleu_4) +
+                                " Bleu_3:" + f(Bleu_3) +
+                                " Bleu_2:" + f(Bleu_2) +
+                                " Bleu_1:" + f(Bleu_1) +
+                                " ROUGE_L:" + f(ROUGE_L)
+
+                        for (j = 0; j < predictions.length; j += 1) {
+                            pred = predictions[j]
+                            image_id = pred["image_id"]
+                            if (!dict_caption.hasOwnProperty(image_id)) {
+                                dict_caption[image_id] = new Array()
+                            }
+                            caption = pred["caption"] + " (" + str_stats + ")"
+                            dict_caption[image_id].push(caption)
+                        }
+                    }
+
+                    to_html(dict_caption)
+                    $("#btn_load").html("LOADED")
+
+                }
+            });
+
+        }
+    });
+
+</script>
+
+</body>
+</html>
